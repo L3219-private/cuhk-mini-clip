@@ -1,0 +1,11 @@
+train:
+  device: auto
+  batch_size: 16
+  epochs: 5
+
+data:
+  train_list: train.jsonl
+  val_list: val.jsonl
+  custom:
+    images_dir: data/custom/images
+    captions_file: data/custom/captions.jsonl
