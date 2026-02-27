@@ -1,4 +1,4 @@
-# src/
+# src/utils/device.py
 def pick_device(prefer = ("xpu", "cuda", "cpu"), device_cfg: str = "auto"):
     """
     device_cfg:
