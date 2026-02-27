@@ -1,12 +1,14 @@
-def pick_device(device_cfg: str = "auto"):
+# src/
+def pick_device(prefer = ("xpu", "cuda", "cpu"), device_cfg: str = "auto"):
     """
-    if cfg is 'auto': try XPU -> CUDA -> CPU
-    otherwise, follow the cfg
+    device_cfg:
+        - "auto": follow prefered order
+        - "xpu" / "cuda" / "cpu": force to use xpu / cuda / cpu if available, otherwise fallback to cpu
     """
     import torch
 
     if device_cfg != "auto":
-        return devise_cfg
+        return device_cfg
 
     # XPU
     try:
