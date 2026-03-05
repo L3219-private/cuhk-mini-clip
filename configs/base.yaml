@@ -1,11 +1,17 @@
-train:
-  device: auto
-  batch_size: 16
-  epochs: 5
+paths:
+  images: data/custom/images
+  captions: data/custom/captions.jsonl
+  train_list: data/custom/train.jsonl
+  val_list: data/custom/val.jsonl
 
-data:
-  train_list: train.jsonl
-  val_list: val.jsonl
-  custom:
-    images_dir: data/custom/images
-    captions_file: data/custom/captions.jsonl
+device:
+  prefer: auto
+
+experiment:
+  seed: 42
+
+train:
+  batch_size: null
+  epochs: null
+
+
