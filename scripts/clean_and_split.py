@@ -15,6 +15,7 @@ What it checks:
 import argparse, json, random
 from pathlib import Path
 from PIL import Image
+import yaml
 
 def resolve_img_path(images_dir: Path, img_rel: str) -> Path:
     """turn all the paths to be absolute or start with data/"""
@@ -54,13 +55,41 @@ def quick_open(img_path: Path) -> bool:
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--config", type=str, default=None, help="YAML config file path")
     ap.add_argument("--images_dir", default="data/custom/images")
     ap.add_argument("--captions",   default="data/custom/captions.jsonl")
-    ap.add_argument("--sample_open", type=int, default=50, help="try open N images (0=disable)")
+    ap.add_argument("--sample_open", type=int, default=None, help="try open N images (0=disable)")
     ap.add_argument("--do_split", action="store_true", help="write train.jsonl/val.jsonl")
-    ap.add_argument("--val_ratio", type=float, default=0.1)  # the ratio of validation data 
-    ap.add_argument("--seed", type=int, default=42, help="seed for split") 
+    ap.add_argument("--val_ratio", type=float, default=None)  # the ratio of validation data 
+    ap.add_argument("--seed", type=int, default=None, help="seed for split") 
     args = ap.parse_args()
+
+    cfg = {}
+    if args.config:
+        cfg_path = Path(args.config)
+        if not cfg_path.exists():
+            raise FileNotFoundError(f"[ERR] config file doesn't exist: {cfg_path}")
+        cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+
+        paths = cfg.get("paths", {}) or {}
+        data = cfg.get("data", {}) or {}
+        exp = cfg.get("experiment", {}) or {}
+
+        # prioritize CLI than config file
+        if args.images_dir == "data/custom/images":
+            args.images_dir = paths.get("images", args.images_dir)
+        if args.captions == "data/custom/captions.jsonl":
+            args.captions = paths.get("captions", args.captions)
+
+        if args.val_ratio is None and isinstance(data.get("val_ratio", None), (int, float)):
+            args.val_ratio = float(data["val_ratio"])
+            if not (0.0 < args.val_ratio < 1.0):
+                raise ValueError(f"[ERR] data.val_ratio should between 0.0 and 1.0, but receive {args.val_ratio}")
+        if args.sample_open is None and isinstance(data.get("sample_open", None), int):
+            args.sample_open = int(data.get("sample_open", 50))
+
+        if args.seed is None and isinstance(exp.get("seed", None), int):
+            args.seed = int(exp["seed"])
 
     images_dir = Path(args.images_dir)
     captions   = Path(args.captions)  # the path of .jsonl
