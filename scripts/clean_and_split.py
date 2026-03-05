@@ -59,6 +59,7 @@ def main():
     ap.add_argument("--sample_open", type=int, default=50, help="try open N images (0=disable)")
     ap.add_argument("--do_split", action="store_true", help="write train.jsonl/val.jsonl")
     ap.add_argument("--val_ratio", type=float, default=0.1)  # the ratio of validation data 
+    ap.add_argument("--seed", type=int, default=42, help="seed for split") 
     args = ap.parse_args()
 
     images_dir = Path(args.images_dir)
@@ -102,6 +103,12 @@ def main():
             print(f"[NO_FILE] line {line_no}: {img_path}")
             continue
 
+        # empty caption
+        if cap.strip() == "":
+            empty_captions += 1
+            print(f"[EMPTY_CAP] line {line_no}: {obj}")
+            continue
+        
         # duplicates
         key_path = img_path.as_posix()
         if key_path in seen_paths:
@@ -119,12 +126,6 @@ def main():
         else:
             seen_caps.add(norm_cap)
 
-        # empty caption
-        if cap.strip() == "":
-            empty_captions += 1
-            print(f"[EMPTY_CAP] line {line_no}: {obj}")
-            continue
-
         samples.append({"image": img_rel, "caption": cap})
 
     # optional quick open a few images
@@ -140,7 +141,7 @@ def main():
 
     # summary of quality of dataset
     print("\n=== Summary ===")
-    print(f"total: {total}")
+    print(f"total_sample: {total}")
     print(f"parse_errors: {parse_errors}")
     print(f"missing_keys: {missing_keys}")
     print(f"empty_captions: {empty_captions}")
@@ -149,7 +150,8 @@ def main():
     print(f"dup_captions: {dup_caps}")
 
     # split
-    if args.do_split and total > 1:
+    if args.do_split and len(samples) > 1:
+        random.seed(args.seed)
         random.shuffle(samples)  # shuffle
         n_val = max(1, int(len(samples) * args.val_ratio))
         val_samples = samples[:n_val]
@@ -160,8 +162,8 @@ def main():
                 for r in rows:
                     f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
-        write_jsonl(Path("val.jsonl"),   val_samples)
-        write_jsonl(Path("train.jsonl"), train_samples)
+        write_jsonl(Path("data/custom/val.jsonl"),   val_samples)
+        write_jsonl(Path("data/custom/train.jsonl"), train_samples)
         print(f"[SPLIT] wrote train.jsonl={len(train_samples)}, val.jsonl={len(val_samples)}")
 
 if __name__ == "__main__":
