@@ -10,8 +10,10 @@ device:
 experiment:
   seed: 42
 
+data:
+  val_ratio: 0.1
+  sample_open: 50
+
 train:
   batch_size: null
   epochs: null
-
-
