@@ -1,5 +1,6 @@
 # src/datasets/custom.py
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional
 import json
