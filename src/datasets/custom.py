@@ -6,6 +6,7 @@ from typing import List, Dict, Any, Tuple, Optional
 import json
 from PIL import Image
 import torch
+from torch.utils.data import Dataset
 
 ALLOWED_EXTS = {".jpg", ".jpeg", ".png"}
 
