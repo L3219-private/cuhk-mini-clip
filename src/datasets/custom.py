@@ -55,9 +55,9 @@ class Vocabtable:
     def build_from_captions(cls, captions: list[str], max_tokens: int = 20000):  # second entry
         """extract the most common max_tokens tokens split by whitespace to build the vocab table"""
         from collections import Counter
-        cnt = Counter()  # a Counter to count token frequencies
+        cnt = Counter()  # Counter({"xxx": 2, "xx": 1})
         for cap in captions:
-            tok = cap.strip().split()
+            tok = cap.strip().split()  # list of tokens in a caption
             cnt.update(tok)
         most = [s for s, _ in cnt.most_common(max_tokens)]
         return cls(most)  # extract the most common max_tokens tokens to build the vocab table
@@ -110,7 +110,7 @@ class CustomDataset(Dataset):
             im = im.convert("RGB")
             # PIL resize takes (W,H); we store (H,W) in image_size (need to reverse)
             im = im.resize((self.image_size[1], self.image_size[0]))
-            # 1D tensor of bytes
+            # buf: 1D tensor of bytes
             buf = torch.ByteTensor(torch.ByteStorage.from_buffer(im.tobytes()))
             # reshape to (H,W,3)
             buf = buf.view(self.image_size[0], self.image_size[1], 3)
@@ -123,13 +123,19 @@ class CustomDataset(Dataset):
         img_rel = row["image"]
         cap = row["caption"]
         img_path = resolve_img_path(self.images_dir, img_rel)
-        image = self.load_image_tensor(img_path)
-        text_ids = torch.tensor(self.vocab.encode(cap), dtype=torch.long)
+        image = self.load_image_tensor(img_path)  # a (3, H, W) float 32 tensor normalised
+        text_ids = torch.tensor(self.vocab.encode(cap), dtype=torch.long) # a list of ids
         return Sample(image=image, text_ids=text_ids, text_len=int(text_ids.numel()), raw_caption=cap)
 
 
 def pad_sequence(seqs: List[torch.Tensor], pad_val: int) -> torch.Tensor:
-    """Pad a list of 1D tensors to the same length, return a 2D tensor"""
+    """
+    Pad a list of 1D tensors to the same length, return a 2D tensor
+    [[token_id1-1, token-id1-2, ...],
+     [token_id2-1, ...        , pad_id],
+     ...
+     [token_idn-1, ...        , pad_id]]
+    """
     if len(seqs) == 0:
         return torch.empty(0, 0, dtype=torch.long)
     L = max(int(s.numel()) for s in seqs)  # max text length (how many tokens)

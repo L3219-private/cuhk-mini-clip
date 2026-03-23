@@ -1,8 +1,8 @@
 # scripts/clean_and_split.py
 """
 Purpose:
-  Lightweight check for a JSONL image-caption dataset
-  create train/val splits.
+  Lightweight quality check for a JSONL image-caption dataset,
+  then optionally split into train / val / test.
 
 What it checks:
   - Each line is valid JSON with keys: "image", "caption"
@@ -10,9 +10,15 @@ What it checks:
   - Sample a few images to test if they can be opened properly or not
   - Basic stats: total, missing keys, empty captions, missing files, duplicates
 
+Splitting modes (--do_split):
+  - Default (row-level): shuffle all rows and split (e.g. custom dataset).
+  - --group_by image   : group rows by image file, shuffle images, then split.
+    Use this for datasets with multiple captions per image (e.g. Flickr30k)
+    so the same image never leaks across splits.
 """
 
 import argparse, json, random
+from collections import defaultdict
 from pathlib import Path
 from PIL import Image
 import yaml
@@ -53,15 +59,67 @@ def quick_open(img_path: Path) -> bool:
     except Exception:
         return False
 
+def write_jsonl(path: Path, rows):
+    with path.open("w", encoding="utf-8") as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+def split_by_row(samples, val_ratio, test_ratio, seed):
+    """Shuffle all rows and split into train / val / test. (for cuhk custom)"""
+    random.seed(seed)
+    random.shuffle(samples)
+    n = len(samples)
+    n_test = max(1, int(n * test_ratio)) if test_ratio > 0 else 0
+    n_val = max(1, int(n * val_ratio)) if val_ratio > 0 else 0
+    if n_val + n_test >= n:
+        raise ValueError(
+            f"val + test leaves no training data. "
+            f"val={n_val}, test={n_test}, total={n}"
+        )
+    test_samples = samples[:n_test]
+    val_samples = samples[n_test:n_test + n_val]
+    train_samples = samples[n_test + n_val:]
+    return train_samples, val_samples, test_samples
+
+def split_by_image(samples, val_ratio, test_ratio, seed):
+    """Group rows by image, shuffle image groups, then split.(for flickr30k)"""
+    grouped = defaultdict(list)
+    for s in samples:
+        grouped[s["image"]].append(s)
+
+    image_keys = sorted(grouped.keys())
+    random.seed(seed)
+    random.shuffle(image_keys)
+
+    n = len(image_keys)
+    n_test = max(1, int(n * test_ratio)) if test_ratio > 0 else 0
+    n_val = max(1, int(n * val_ratio)) if val_ratio > 0 else 0
+    if n_val + n_test >= n:
+        raise ValueError(
+            f"val + test leaves no training images. "
+            f"val={n_val}, test={n_test}, total={n}"
+        )
+
+    test_keys = image_keys[:n_test]
+    val_keys = image_keys[n_test:n_test + n_val]
+    train_keys = image_keys[n_test + n_val:]
+
+    flatten = lambda keys: [row for k in keys for row in grouped[k]]
+    return flatten(train_keys), flatten(val_keys), flatten(test_keys)
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", type=str, default=None, help="YAML config file path")
-    ap.add_argument("--images_dir", default="data/custom/images")
-    ap.add_argument("--captions",   default="data/custom/captions.jsonl")
+    ap.add_argument("--images_dir", default="data/flickr30k/images")
+    ap.add_argument("--captions",   default="data/flickr30k/all.jsonl")
+    ap.add_argument("--out_dir",    default=None, help="Output directory (default: same as captions dir)")
     ap.add_argument("--sample_open", type=int, default=None, help="try open N images (0=disable)")
-    ap.add_argument("--do_split", action="store_true", help="write train.jsonl/val.jsonl")
-    ap.add_argument("--val_ratio", type=float, default=None)  # the ratio of validation data 
-    ap.add_argument("--seed", type=int, default=None, help="seed for split") 
+    ap.add_argument("--do_split", action="store_true", help="split into train.jsonl / val.jsonl / test.jsonl")
+    ap.add_argument("--group_by", choices=["row", "image"], default="image",
+                    help="Split: 'image' (default-flickr30k) or 'row' (cuhk custom)")
+    ap.add_argument("--val_ratio", type=float, default=None)
+    ap.add_argument("--test_ratio", type=float, default=None)
+    ap.add_argument("--seed", type=int, default=None, help="seed for split")
     args = ap.parse_args()
 
     cfg = {}
@@ -76,9 +134,9 @@ def main():
         exp = cfg.get("experiment", {}) or {}
 
         # prioritize CLI than config file
-        if args.images_dir == "data/custom/images":
+        if args.images_dir == "data/flickr30k/images":
             args.images_dir = paths.get("images", args.images_dir)
-        if args.captions == "data/custom/captions.jsonl":
+        if args.captions == "data/flickr30k/flickr30k_sample.jsonl":
             args.captions = paths.get("captions", args.captions)
 
         if args.val_ratio is None and isinstance(data.get("val_ratio", None), (int, float)):
@@ -138,31 +196,32 @@ def main():
             print(f"[EMPTY_CAP] line {line_no}: {obj}")
             continue
         
-        # duplicates
-        key_path = img_path.as_posix()
-        if key_path in seen_paths:
-            dup_paths += 1
-            print(f"[DUPLICATE_PATH] line {line_no}: {obj}")
-            continue
-        else:
-            seen_paths.add(key_path)
+        # duplicates (only flag exact path+caption pairs when grouping by row)
+        if args.group_by == "row":
+            key_path = img_path.as_posix()
+            if key_path in seen_paths:
+                dup_paths += 1
+                print(f"[DUPLICATE_PATH] line {line_no}: {obj}")
+                continue
+            else:
+                seen_paths.add(key_path)
 
-        norm_cap = cap.strip().lower()
-        if norm_cap in seen_caps:
-            dup_caps += 1
-            print(f"[DUPLICATE_CAP] line {line_no}: {obj}")
-            continue
-        else:
-            seen_caps.add(norm_cap)
+            norm_cap = cap.strip().lower()
+            if norm_cap in seen_caps:
+                dup_caps += 1
+                print(f"[DUPLICATE_CAP] line {line_no}: {obj}")
+                continue
+            else:
+                seen_caps.add(norm_cap)
 
-        samples.append({"image": img_rel, "caption": cap})
+        samples.append(obj)
 
     # optional quick open a few images
-    if args.sample_open > 0:
+    if args.sample_open and args.sample_open > 0:
         to_check = random.sample(samples, min(args.sample_open, len(samples)))
         bad_open = 0
         for s in to_check:
-            img_path = resolve_img_path(images_dir, s["image"])  # return a list
+            img_path = resolve_img_path(images_dir, s["image"])   # return a list
             if not quick_open(img_path):
                 bad_open += 1
                 print(f"[OPEN_ERR] {img_path}")
@@ -177,23 +236,33 @@ def main():
     print(f"missing_files: {missing_files}")
     print(f"dup_paths: {dup_paths}")
     print(f"dup_captions: {dup_caps}")
+    print(f"clean_samples: {len(samples)}")
 
     # split
     if args.do_split and len(samples) > 1:
-        random.seed(args.seed)
-        random.shuffle(samples)  # shuffle
-        n_val = max(1, int(len(samples) * args.val_ratio))
-        val_samples = samples[:n_val]
-        train_samples = samples[n_val:]
+        val_ratio = args.val_ratio if args.val_ratio else 0.1
+        test_ratio = args.test_ratio if args.test_ratio else 0.0
+        seed = args.seed if args.seed else 42
 
-        def write_jsonl(path: Path, rows):
-            with path.open("w", encoding="utf-8") as f:
-                for r in rows:
-                    f.write(json.dumps(r, ensure_ascii=False) + "\n")
+        if args.group_by == "image":
+            train_samples, val_samples, test_samples = split_by_image(
+                samples, val_ratio, test_ratio, seed
+            )
+        else:
+            train_samples, val_samples, test_samples = split_by_row(
+                samples, val_ratio, test_ratio, seed
+            )
 
-        write_jsonl(Path("data/custom/val.jsonl"),   val_samples)
-        write_jsonl(Path("data/custom/train.jsonl"), train_samples)
-        print(f"[SPLIT] wrote train.jsonl={len(train_samples)}, val.jsonl={len(val_samples)}")
+        out_dir = Path(args.out_dir) if args.out_dir else captions.parent
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        write_jsonl(out_dir / "train.jsonl", train_samples)
+        write_jsonl(out_dir / "val.jsonl",   val_samples)
+        print(f"[SPLIT] train.jsonl={len(train_samples)}, val.jsonl={len(val_samples)}", end="")
+        if test_samples:
+            write_jsonl(out_dir / "test.jsonl", test_samples)
+            print(f", test.jsonl={len(test_samples)}", end="")
+        print(f"  (group_by={args.group_by})")
 
 if __name__ == "__main__":
     main()
