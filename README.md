@@ -27,8 +27,7 @@ This project has **two independent tracks**:
 - **MLP projection to shared embedding space**: \
    Keeps the same CLIP-style interface as other encoders: output `(B, D)`.
 
-- **Why this matters**:
-
+- **Why this matters**: \
    SmallCNN is not “randomly simple.”
    It is a deliberate design to represent the lightweight side of the trade-off space while still preserving representation power.
 
@@ -41,3 +40,18 @@ This project has **two independent tracks**:
   SmallCNN is the lightweight option. \
   ResNet-18 is the middle option — deep enough to learn richer features through resnet, but small enough to train on ~30K images without too much overfitting.  \
   ResNet-50 is the deepest option to learn richest features, but probable to overfit.
+
+### Text encoders:
+#### Design choices for TextCNN
+
+- **Why kernel sizes (2, 3, 4, 5)?**: \
+  2-gram catches short phrases ("red car", "young woman")
+  3–5-gram catches longer descriptive phrases common in Flickr30k captions.
+  Using all four at the same time lets the model recognize patterns at multiple scales.
+
+- **Why max-pool over time (not average-pool)?**: \
+  Max-pool extracts the strongest signal from each filter regardless of where it appears in the sentence.
+
+- **Why word_dim is set to be 128?**: \
+  128 is enough since there are not many words in captions.
+  If word_dim is 256/512, then the benefit would be limited however parameters would be far more.
