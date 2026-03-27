@@ -1,13 +1,13 @@
-# src/models/vision_encoder_smallcnn.py
+# src/models/image_encoder_smallcnn.py
 
 import torch
 import torch.nn as nn
 
-class VisionEncoder_SmallCNN(nn.Module):
+class ImageEncoder_SmallCNN(nn.Module):
     def __init__(self, embed_dim: int = 128):
         super().__init__()
         # channel: 32->64->128->256 
-        self.encoder = nn.Sequential(
+        self.backbone = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(32),
             nn.ReLU(inplace=True),
@@ -37,6 +37,6 @@ class VisionEncoder_SmallCNN(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        h = self.encoder(x)              # (B, 256, 1, 1)
+        h = self.backbone(x)              # (B, 256, 1, 1)
         h = h.flatten(start_dim=1)       # (B, 256)
         return self.projection(h)        # (B, embed_dim)
