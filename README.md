@@ -56,7 +56,16 @@ This project has **two independent tracks**:
   128 is enough since there are not many words in captions. \
   If word_dim is 256/512, then the benefit would be limited however parameters would be far more.
 
-# Testing
+---
+
+## Setup
+
+```bash
+pip install -r requirements.txt
+```
+
+## Testing
 
 ```bash
 python -m pytest tests/ -v
+```
