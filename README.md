@@ -13,19 +13,30 @@ This project has **two independent tracks**:
 ---
 
 ## Track B 
-### Design choices for SmallCNN
+### Image encoders:
+#### Design choices for SmallCNN
 
-- **4 blocks (not too shallow, not too deep)**
+- **4 blocks (not too shallow, not too deep)**: \
    2–3 blocks are often under-capacity; very deep CNNs lose the “lightweight” advantage.
    4 blocks take a mid point.
 
-- **Conv3×3 + BN + ReLU + Pool**
+- **Conv3×3 + BN + ReLU + Pool**: \
    A stable combination: computationally efficient and fast and lightweight(pool in each layer)
 
-- **MLP projection to shared embedding space**
+- **MLP projection to shared embedding space**: \
    Keeps the same CLIP-style interface as other encoders: output `(B, D)`.
 
-### Why this matters
+**Why this matters**:
 
 SmallCNN is not “randomly simple.”
 It is a deliberate design to represent the lightweight side of the trade-off space while still preserving representation power.
+
+#### Design choices for ResNet-18
+
+- **Why not use pretrained weights?**: \
+  The comparison of all three image encoders (SmallCNN / ResNet-18 / ResNet-50) must be fair — SmallCNN has no pretrained option, so neither should the others.
+
+- **Why keep ResNet-18 when we already have SmallCNN?**: \
+  SmallCNN is the lightweight option. \
+  ResNet-18 is the middle option — deep enough to learn richer features
+  through resnet, but small enough to train on ~30K images without too much overfitting.
