@@ -17,3 +17,14 @@ data:
 train:
   batch_size: null
   epochs: null
+
+model:
+  embed_dim: 128              # shared image-text embedding dimension
+  image_encoder: smallcnn    # smallcnn | resnet18 | resnet50
+  text_encoder: textcnn      # textcnn | bigru | transformer
+
+  textcnn:
+    word_dim: 128
+    n_filters: 100
+    kernel_sizes: [2, 3, 4, 5]
+    max_vocab: 20000
