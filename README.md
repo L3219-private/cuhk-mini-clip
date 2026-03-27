@@ -55,3 +55,8 @@ This project has **two independent tracks**:
 - **Why word_dim is set to be 128?**: \
   128 is enough since there are not many words in captions. \
   If word_dim is 256/512, then the benefit would be limited however parameters would be far more.
+
+# Testing
+
+```bash
+python -m pytest tests/ -v
