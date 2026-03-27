@@ -45,13 +45,13 @@ This project has **two independent tracks**:
 #### Design choices for TextCNN
 
 - **Why kernel sizes (2, 3, 4, 5)?**: \
-  2-gram catches short phrases ("red car", "young woman")
-  3–5-gram catches longer descriptive phrases common in Flickr30k captions.
+  2-gram catches short phrases ("red car", "young woman", which is quite common). \
+  3–5-gram catches longer descriptive phrases common in Flickr30k captions. \
   Using all four at the same time lets the model recognize patterns at multiple scales.
 
 - **Why max-pool over time (not average-pool)?**: \
   Max-pool extracts the strongest signal from each filter regardless of where it appears in the sentence.
 
 - **Why word_dim is set to be 128?**: \
-  128 is enough since there are not many words in captions.
+  128 is enough since there are not many words in captions. \
   If word_dim is 256/512, then the benefit would be limited however parameters would be far more.
