@@ -15,3 +15,4 @@ data/custom/
 data/**/*.jsonl
 !data/sample.jsonl
 
+results.csv

@@ -56,6 +56,11 @@ This project has **two independent tracks**:
   128 is enough since there are not many words in captions. \
   If word_dim is 256/512, then the benefit would be limited however parameters would be far more.
 
+#### Design choices for BiGRU
+
+- **Why use dropout=0.3 if num_dim>1 ?**: \
+  If num_dim=1, a warning would emerge. We use dropout=0.3 if num_dim>1 to avoid overfitting.
+  
 ---
 
 ## Setup
