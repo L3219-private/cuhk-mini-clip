@@ -1,4 +1,4 @@
-# mini-CLIP
+# cuhk-mini-CLIP
 
 A CLIP-style image-text alignment system with a systematic 4-factor ablation study analysing the trade-off between efficiency, accuracy, and robustness.
 
@@ -117,6 +117,7 @@ mini-CLIP/
 │
 ├── checkpoints/                   # Saved model weights (gitignored)
 ├── pyproject.toml                 # Project config and dependencies (uv)
+├── uv.lock                        # Locked dependency versions
 └── .gitignore
 ```
 

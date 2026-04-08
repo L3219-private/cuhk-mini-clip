@@ -1,8 +1,7 @@
 paths:
-  images: data/custom/images
-  captions: data/custom/captions.jsonl
-  train_list: data/custom/train.jsonl
-  val_list: data/custom/val.jsonl
+  images: data/flickr30k/images
+  train_list: data/flickr30k/train.jsonl
+  val_list: data/flickr30k/val.jsonl
 
 device:
   prefer: auto
@@ -15,16 +14,26 @@ data:
   sample_open: 50
 
 train:
-  batch_size: null
-  epochs: null
+  batch_size: 32
+  epochs: 20
+  lr: 0.0001  # learning rate
+  temperature: 0.07
+  temperature_mode: fixed  # fixed | learn
+  patience: 5  # early stopping: stop if val_loss doesn't improve for N=patience epochs
 
 model:
-  embed_dim: 128              # shared image-text embedding dimension
-  image_encoder: smallcnn    # smallcnn | resnet18 | resnet50
-  text_encoder: textcnn      # textcnn | bigru | transformer
+  embed_dim: 128  # shared image-text embedding dimension
+  image_encoder: resnet18  # smallcnn | resnet18 | resnet50
+  text_encoder: bigru  # textcnn | bigru | transformer
 
   textcnn:
     word_dim: 128
     n_filters: 100
     kernel_sizes: [2, 3, 4, 5]
     max_vocab: 20000
+
+  bigru:
+    word_dim: 128
+    hidden_dim: 128
+    num_layers: 2
+    dropout: 0.3

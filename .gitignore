@@ -6,7 +6,6 @@ __pycache__/
 
 # uv / venv
 .venv/
-uv.lock
 
 # Jupyter
 .ipynb_checkpoints/
